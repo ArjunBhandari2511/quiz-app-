@@ -34,7 +34,7 @@ const Scoreboard = () => {
               </div>
               <div className="mt-2">
                 <span className="font-medium">Score:</span>{" "}
-                {attempt.score} / {attempt.total}
+                {attempt.score + 1} / {attempt.total}
               </div>
             </li>
           ))}
