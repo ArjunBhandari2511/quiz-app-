@@ -31,7 +31,7 @@ The **Interactive Quiz Platform** is a web-based quiz application that allows us
    ```
 2. Navigate to the project directory:
    ```sh
-   cd interactive-quiz-platform
+   cd quiz-app-
    ```
 3. Install dependencies:
    ```sh
