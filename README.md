@@ -57,8 +57,8 @@ npm run build
 6. Enter **bonus mode** for additional scoring opportunities.
 
 ## **Links**
-- **Live App**: https://quiz-app-pi-olive.vercel.app/(#)
-- **GitHub Repository**: https://github.com/ArjunBhandari2511/quiz-app-(#)
+- **Live App**: https://quiz-app-pi-olive.vercel.app/
+- **GitHub Repository**: https://github.com/ArjunBhandari2511/quiz-app-
 
 ---
 
