@@ -9,13 +9,16 @@ const Quiz = () => {
   const [score, setScore] = useState(0);
   const [showScore, setShowScore] = useState(false);
   const [answerStatus, setAnswerStatus] = useState(null);
-  const [timer, setTimer] = useState(30); // Set initial timer to 30 seconds
-  const [isAnswered, setIsAnswered] = useState(false); // Track if the user answered
+  const [timer, setTimer] = useState(30);
+  const [isAnswered, setIsAnswered] = useState(false);
+  const [bonusMode, setBonusMode] = useState(false);
+  const [quizCompleted, setQuizCompleted] = useState(false);
 
-  // Calculate progress percentage based on currentQuestion
-  const progress = ((currentQuestion + 1) / quizData.length) * 100;
+  const regularQuestions = quizData.filter(q => !q.bonus);
+  const bonusQuestions = quizData.filter(q => q.bonus);
+  const totalQuestions = bonusMode ? quizData.length : regularQuestions.length;
+  const progress = ((currentQuestion + 1) / totalQuestions) * 100;
 
-  // Reset all state when the component mounts (reloads or quiz starts fresh)
   useEffect(() => {
     setCurrentQuestion(0);
     setSelectedAnswer(null);
@@ -23,139 +26,120 @@ const Quiz = () => {
     setScore(0);
     setShowScore(false);
     setAnswerStatus(null);
-    setTimer(30); // Reset timer to 30 seconds
-  }, []); // This ensures it runs only once when the component loads or the quiz restarts
+    setTimer(30);
+    setBonusMode(false);
+    setQuizCompleted(false);
+  }, [quizCompleted]);
 
   useEffect(() => {
-    // If quiz is completed or answered, stop the timer
     if (showScore || isAnswered) return;
-
     if (timer > 0) {
       const interval = setInterval(() => {
-        setTimer((prevTimer) => prevTimer - 1);
+        setTimer(prevTimer => prevTimer - 1);
       }, 1000);
-
-      return () => clearInterval(interval); // Clean up the interval when the component is unmounted or timer state changes
+      return () => clearInterval(interval);
     } else {
-      // If time runs out, automatically move to the next question
       nextQuestion();
     }
   }, [timer, isAnswered, showScore]);
 
   const handleAnswerClick = (answer) => {
     setSelectedAnswer(answer);
-    const isCorrect = quizData[currentQuestion].answer === answer;
+    const isCorrect = (bonusMode ? quizData : regularQuestions)[currentQuestion].answer === answer;
     setAnswerStatus(isCorrect ? "correct" : "incorrect");
     if (isCorrect) setScore(score + 1);
-    setIsAnswered(true); // Mark the question as answered
-    setTimeout(() => {
-      nextQuestion();
-    }, 1500);
+    setIsAnswered(true);
+    setTimeout(() => nextQuestion(), 100);
   };
 
   const handleIntegerSubmit = () => {
-    const isCorrect = parseInt(inputAnswer) === quizData[currentQuestion].answer;
+    const isCorrect = parseInt(inputAnswer) === (bonusMode ? quizData : regularQuestions)[currentQuestion].answer;
     setAnswerStatus(isCorrect ? "correct" : "incorrect");
     if (isCorrect) setScore(score + 1);
-    setIsAnswered(true); // Mark the question as answered
-
-    setTimeout(() => {
-      setInputAnswer(""); // Clears Input
-      nextQuestion();
-    }, 1500);
+    setIsAnswered(true);
+    setInputAnswer(""); // Clear input immediately
+    setTimeout(() => nextQuestion(), 100);
   };
 
   const nextQuestion = () => {
-    if (currentQuestion + 1 < quizData.length) {
+    if (currentQuestion + 1 < totalQuestions) {
       setCurrentQuestion(currentQuestion + 1);
       setSelectedAnswer(null);
       setAnswerStatus(null);
-      setTimer(30); // Reset timer for the next question
-      setIsAnswered(false); // Reset answer status
+      setTimer(30);
+      setIsAnswered(false);
+    } else if (!bonusMode && bonusQuestions.length > 0) {
+      setShowScore(false);
     } else {
       setShowScore(true);
-      saveQuizAttempt(score, quizData.length);
+      saveQuizAttempt(score, bonusMode ? 20 : 10);
     }
+  };
+
+  const handleBonusMode = () => {
+    setBonusMode(true);
+    setCurrentQuestion(bonusQuestions.length);
+    setShowScore(false);
+  };
+
+  const restartQuiz = () => {
+    setQuizCompleted(true);
   };
 
   if (showScore) {
     return (
       <div className="text-center">
         <h2 className="text-2xl font-bold mb-4">Quiz Completed</h2>
-        <p className="text-xl">
-          Your Score: {score}/{quizData.length}
-        </p>
+        <p className="text-xl">Your Score: {score}/{bonusMode ? 20 : 10}</p>
+        <button onClick={restartQuiz} className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+          Reattempt Quiz
+        </button>
       </div>
     );
   }
 
-  const question = quizData[currentQuestion];
+  const question = (bonusMode ? quizData : regularQuestions)[currentQuestion];
 
   return (
     <div className="max-w-lg mx-auto p-6 bg-white shadow-lg rounded-lg">
-      {/* Progress Bar */}
       <div className="mb-6">
         <div className="w-full bg-gray-200 rounded-full h-2.5">
-          {/* Progress bar with smooth sliding animation */}
-          <div
-            className="bg-blue-600 h-2.5 rounded-full"
-            style={{
-              width: `${progress}%`,
-              transition: "width 0.5s ease-in-out", // Smooth transition
-            }}
-          ></div>
+          <div className="bg-blue-600 h-2.5 rounded-full" style={{ width: `${progress}%`, transition: "width 0.5s ease-in-out" }}></div>
         </div>
         <div className="text-sm text-gray-500 text-right">{Math.round(progress)}%</div>
       </div>
-
       <h2 className="text-xl font-semibold mb-6">{question.question}</h2>
+      <div className="mb-4 text-xl font-semibold text-red-600">Time Left: {timer}s</div>
 
-      {/* Timer */}
-      <div className="mb-4 text-xl font-semibold text-red-600">
-        Time Left: {timer}s
-      </div>
-
-      {/* Multiple Choice Questions */}
       {question.options && (
         <div className="space-y-4">
           {question.options.map((option, index) => (
-            <button
-              key={index}
-              className={`w-full p-3 text-left rounded-lg border-2 ${
-                selectedAnswer === option
-                  ? answerStatus === "correct"
-                    ? "bg-green-500 text-white"
-                    : "bg-red-500 text-white"
-                  : "bg-gray-100 hover:bg-gray-200"
-              }`}
-              onClick={() => handleAnswerClick(option)}
-              disabled={selectedAnswer !== null}
-            >
+            <button key={index} className={`w-full p-3 text-left rounded-lg border-2 ${selectedAnswer === option ? (answerStatus === "correct" ? "bg-green-500 text-white" : "bg-red-500 text-white") : "bg-gray-100 hover:bg-gray-200"}`} onClick={() => handleAnswerClick(option)} disabled={selectedAnswer !== null}>
               {option}
             </button>
           ))}
         </div>
       )}
 
-      {/* Integer-Based Questions */}
       {!question.options && (
         <div className="mt-4">
-          <input
-            type="number"
-            value={inputAnswer}
-            onChange={(e) => setInputAnswer(e.target.value)}
-            className="w-full p-3 border-2 rounded-lg mb-4"
-            disabled={answerStatus !== null}
-          />
-          <button
-            onClick={handleIntegerSubmit}
-            disabled={inputAnswer === "" || answerStatus !== null}
-            className="w-full p-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400"
-          >
+          <input type="number" value={inputAnswer} onChange={(e) => setInputAnswer(e.target.value)} className="w-full p-3 border-2 rounded-lg mb-4" disabled={answerStatus !== null} />
+          <button onClick={handleIntegerSubmit} disabled={inputAnswer === "" || answerStatus !== null} className="w-full p-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400">
             Submit
           </button>
           {answerStatus === "correct" && <p className="text-green-500 mt-2">✔ Correct</p>}
           {answerStatus === "incorrect" && <p className="text-red-500 mt-2">✖ Incorrect</p>}
+        </div>
+      )}
+
+      {!bonusMode && currentQuestion + 1 === regularQuestions.length && bonusQuestions.length > 0 && (
+        <div className="mt-4">
+          <button onClick={() => setShowScore(true)} className="w-full p-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700">
+            Submit Quiz
+          </button>
+          <button onClick={handleBonusMode} className="w-full mt-2 p-3 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600">
+            Enter Bonus Mode
+          </button>
         </div>
       )}
     </div>
